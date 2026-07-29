@@ -29,10 +29,7 @@ public class AdminCategoriesController {
             @PathVariable Long catId,
             @RequestBody @Valid NewCategoryDto dto
     ) {
-        CategoryDto categoryDto = new CategoryDto();
-        categoryDto.setName(dto.getName());
-        CategoryDto updated = service.update(catId, categoryDto);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(service.update(catId, dto));
     }
 
     @DeleteMapping("/{catId}")

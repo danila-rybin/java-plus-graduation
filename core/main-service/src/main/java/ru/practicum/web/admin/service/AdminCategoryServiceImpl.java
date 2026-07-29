@@ -52,7 +52,7 @@ public class AdminCategoryServiceImpl implements AdminCategoryService {
     }
 
     @Override
-    public CategoryDto update(Long id, CategoryDto dto) {
+    public CategoryDto update(Long id, NewCategoryDto dto) {
         log.info("Обновление категории с id={}: новое название '{}'", id, dto.getName());
 
         validator.validateCategoryName(dto.getName());
@@ -65,6 +65,7 @@ public class AdminCategoryServiceImpl implements AdminCategoryService {
 
         Category updated = categoryRepository.save(category);
         log.info("Категория с id={} обновлена: '{}' -> '{}'", id, oldName, dto.getName());
+
         return CategoryMapper.toDto(updated);
     }
 
