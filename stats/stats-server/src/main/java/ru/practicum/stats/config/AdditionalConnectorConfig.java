@@ -1,4 +1,4 @@
-//package ru.practicum.stats.config;
+package ru.practicum.stats.config;//package ru.practicum.stats.config;
 //
 //import org.apache.catalina.connector.Connector;
 //import org.springframework.beans.factory.annotation.Value;

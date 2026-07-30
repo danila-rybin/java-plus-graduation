@@ -4,11 +4,11 @@ spring:
 
   config:
     import: optional:configserver:http://localhost:8888
+    fail-fast: false
 
   cloud:
     gateway:
       routes:
-        # ============ STATS SERVER ============
         - id: stats_hit_route
           uri: lb://STATS-SERVER
           predicates:
@@ -36,9 +36,38 @@ spring:
               args:
                 parts: 1
 
-        # ============ MAIN-SERVICE ПУБЛИЧНЫЕ ============
+        - id: event_requests_route
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/users/{userId}/events/{eventId}/requests/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: private_user_requests_route
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/users/{userId}/requests/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: private_user_events_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/users/{userId}/events/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
         - id: public_events_route
-          uri: lb://MAIN-SERVICE
+          uri: lb://EVENT-SERVICE
           predicates:
             - Path=/events/**
           filters:
@@ -48,7 +77,7 @@ spring:
                 statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
 
         - id: public_categories_route
-          uri: lb://MAIN-SERVICE
+          uri: lb://EVENT-SERVICE
           predicates:
             - Path=/categories/**
           filters:
@@ -57,50 +86,8 @@ spring:
                 retries: 3
                 statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
 
-        - id: public_compilations_route
-          uri: lb://MAIN-SERVICE
-          predicates:
-            - Path=/compilations/**
-          filters:
-            - name: Retry
-              args:
-                retries: 3
-                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
-
-        # ============ MAIN-SERVICE ПРИВАТНЫЕ (ПОЛЬЗОВАТЕЛЬСКИЕ) ============
-        - id: private_user_events_route
-          uri: lb://MAIN-SERVICE
-          predicates:
-            - Path=/users/{userId}/events/**
-          filters:
-            - name: Retry
-              args:
-                retries: 3
-                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
-
-        - id: private_user_requests_route
-          uri: lb://MAIN-SERVICE
-          predicates:
-            - Path=/users/{userId}/requests/**
-          filters:
-            - name: Retry
-              args:
-                retries: 3
-                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
-
-        # ============ MAIN-SERVICE АДМИНИСТРАТИВНЫЕ ============
-        - id: admin_users_route
-          uri: lb://MAIN-SERVICE
-          predicates:
-            - Path=/admin/users/**
-          filters:
-            - name: Retry
-              args:
-                retries: 3
-                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
-
         - id: admin_categories_route
-          uri: lb://MAIN-SERVICE
+          uri: lb://EVENT-SERVICE
           predicates:
             - Path=/admin/categories/**
           filters:
@@ -109,18 +96,8 @@ spring:
                 retries: 3
                 statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
 
-        - id: admin_compilations_route
-          uri: lb://MAIN-SERVICE
-          predicates:
-            - Path=/admin/compilations/**
-          filters:
-            - name: Retry
-              args:
-                retries: 3
-                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
-
         - id: admin_events_route
-          uri: lb://MAIN-SERVICE
+          uri: lb://EVENT-SERVICE
           predicates:
             - Path=/admin/events/**
           filters:
@@ -129,11 +106,68 @@ spring:
                 retries: 3
                 statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
 
-        # ============ MAIN-SERVICE ACTUATOR ============
-        - id: main_service_actuator_route
-          uri: lb://MAIN-SERVICE
+        - id: event_service_actuator_route
+          uri: lb://EVENT-SERVICE
           predicates:
-            - Path=/main-service/actuator/**
+            - Path=/event-service/actuator/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+        - id: public_compilations_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/compilations/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: admin_compilations_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/admin/compilations/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: admin_users_route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/admin/users/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: user_public_route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/users/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: request_service_actuator_route
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/request-service/actuator/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+        - id: user_service_actuator_route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/user-service/actuator/**
           filters:
             - name: StripPrefix
               args:
@@ -158,6 +192,10 @@ logging:
     org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: DEBUG
     org.springframework.cloud.client.loadbalancer: DEBUG
     com.netflix.discovery: DEBUG
+    root: DEBUG
+    org.springframework.boot: DEBUG
+    org.springframework.context: DEBUG
+
 
 management:
   endpoints:

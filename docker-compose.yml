@@ -1,42 +1,24 @@
+version: '3.8'
 services:
-  main-db:
+  ewm-db:
     image: postgres:16.1
-    container_name: ewm-main-db
+    container_name: ewm-db
     environment:
-      POSTGRES_DB: ewm_main
+      POSTGRES_DB: ewm_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
-      - main-db-data:/var/lib/postgresql/data
+      - ewm-db-data:/var/lib/postgresql/data
+      - ./core/event-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  stats-db:
-    image: postgres:16.1
-    container_name: ewm-stats-db
-    environment:
-      POSTGRES_DB: stats
-      POSTGRES_USER: stats
-      POSTGRES_PASSWORD: stats
-    ports:
-      - "5433:5432"
-    volumes:
-      - stats-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stats"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ewm_db"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
 volumes:
-  main-db-data:
-    driver: local
-  stats-db-data:
+  ewm-db-data:
     driver: local

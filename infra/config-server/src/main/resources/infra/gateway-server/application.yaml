@@ -1,0 +1,196 @@
+spring:
+  application:
+    name: gateway-server
+
+  cloud:
+    gateway:
+      routes:
+        - id: stats_hit_route
+          uri: lb://STATS-SERVER
+          predicates:
+            - Path=/stats-server/hit/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+        - id: stats_route
+          uri: lb://STATS-SERVER
+          predicates:
+            - Path=/stats-server/stats/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+        - id: stats_actuator_route
+          uri: lb://STATS-SERVER
+          predicates:
+            - Path=/stats-server/actuator/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+        - id: event_requests_route
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/users/{userId}/events/{eventId}/requests/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: private_user_requests_route
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/users/{userId}/requests/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: private_user_events_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/users/{userId}/events/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: public_events_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/events/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: public_categories_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/categories/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: admin_categories_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/admin/categories/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: admin_events_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/admin/events/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: event_service_actuator_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/event-service/actuator/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+        - id: public_compilations_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/compilations/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: admin_compilations_route
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/admin/compilations/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: admin_users_route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/admin/users/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: user_public_route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/users/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE, BAD_GATEWAY
+
+        - id: request_service_actuator_route
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/request-service/actuator/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+        - id: user_service_actuator_route
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/user-service/actuator/**
+          filters:
+            - name: StripPrefix
+              args:
+                parts: 1
+
+server:
+  port: 8080
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    preferIpAddress: true
+    instance-id: ${spring.application.name}:${server.port}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: DEBUG
+    org.springframework.cloud.client.loadbalancer: DEBUG
+    com.netflix.discovery: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway,routes,health
