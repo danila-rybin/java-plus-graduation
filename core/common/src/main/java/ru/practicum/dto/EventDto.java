@@ -24,6 +24,6 @@ public class EventDto {
     private String state;
     private String createdOn;
     private String publishedOn;
-    private Long views;
+    private Double rating;
     private Long confirmedRequests;
 }

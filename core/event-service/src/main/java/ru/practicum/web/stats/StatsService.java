@@ -39,7 +39,7 @@ public class StatsService {
     public void setViewsForEvents(List<Event> events) {
         events.forEach(event -> {
             Long views = getViews(event);
-            event.setViews(views);
+//            event.setViews(views);
         });
     }
 }

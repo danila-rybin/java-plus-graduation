@@ -33,7 +33,7 @@ public class EventMapper {
         dto.setRequestModeration(event.getRequestModeration() != null ? event.getRequestModeration() : true);
         dto.setCreatedOn(event.getCreatedOn() != null ? event.getCreatedOn().format(FORMATTER) : null);
         dto.setPublishedOn(event.getPublishedOn() != null ? event.getPublishedOn().format(FORMATTER) : null);
-        dto.setViews(event.getViews() != null ? event.getViews() : ValidationConstants.DEFAULT_VIEWS);
+        dto.setRating(event.getRating() != null ? event.getRating() : ValidationConstants.DEFAULT_VIEWS);
         dto.setConfirmedRequests(event.getConfirmedRequests() != null ? event.getConfirmedRequests() : ValidationConstants.DEFAULT_CONFIRMED_REQUESTS);
         dto.setLocation(event.getLocation());
 
@@ -89,7 +89,7 @@ public class EventMapper {
         event.setParticipantLimit(dto.getParticipantLimit() != null ? dto.getParticipantLimit() : 0);
         event.setRequestModeration(dto.getRequestModeration() != null ? dto.getRequestModeration() : true);
         event.setConfirmedRequests(dto.getConfirmedRequests() != null ? dto.getConfirmedRequests() : ValidationConstants.DEFAULT_CONFIRMED_REQUESTS);
-        event.setViews(dto.getViews() != null ? dto.getViews() : ValidationConstants.DEFAULT_VIEWS);
+        event.setRating(dto.getRating() != null ? dto.getRating() : ValidationConstants.DEFAULT_VIEWS);
 
         if (dto.getCreatedOn() != null && !dto.getCreatedOn().isEmpty()) {
             try {
@@ -151,8 +151,8 @@ public class EventMapper {
             event.setConfirmedRequests(dto.getConfirmedRequests());
         }
 
-        if (dto.getViews() != null) {
-            event.setViews(dto.getViews());
+        if (dto.getRating() != null) {
+            event.setRating(dto.getRating());
         }
     }
 
@@ -167,7 +167,7 @@ public class EventMapper {
         dto.setAnnotation(event.getAnnotation());
         dto.setEventDate(event.getEventDate() != null ? event.getEventDate().format(FORMATTER) : null);
         dto.setPaid(event.getPaid() != null ? event.getPaid() : false);
-        dto.setViews(event.getViews() != null ? event.getViews() : ValidationConstants.DEFAULT_VIEWS);
+        dto.setRating(event.getRating() != null ? event.getRating() : ValidationConstants.DEFAULT_VIEWS);
         dto.setConfirmedRequests(event.getConfirmedRequests() != null ? event.getConfirmedRequests() : ValidationConstants.DEFAULT_CONFIRMED_REQUESTS);
 
         CategoryDto categoryDto = new CategoryDto();

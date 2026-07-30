@@ -21,4 +21,6 @@ public interface PrivateRequestService {
             Long eventId,
             EventRequestStatusUpdateRequest statusUpdateRequest
     );
+
+    boolean isUserParticipated(Long userId, Long eventId);
 }
