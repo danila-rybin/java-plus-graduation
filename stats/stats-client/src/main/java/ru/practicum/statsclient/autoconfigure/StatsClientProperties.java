@@ -8,7 +8,7 @@ public class StatsClientProperties {
     /**
      * Базовый URL сервиса статистики, без завершающего слэша: http://host:port
      */
-    private String baseUrl = "http://localhost:9090";
+    private String baseUrl = "http://stats-server";
 
     /**
      * Таймаут установки соединения (мс).
