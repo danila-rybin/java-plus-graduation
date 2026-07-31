@@ -13,12 +13,18 @@
 
     <artifactId>stats</artifactId>
     <packaging>pom</packaging>
+    <version>0.0.1-SNAPSHOT</version>
     <name>stats</name>
 
     <modules>
+        <module>stats-avro</module>
+        <module>stats-proto</module>
         <module>stats-dto</module>
-        <module>stats-server</module>
         <module>stats-client</module>
+        <module>stats-server</module>
+        <module>collector</module>
+        <module>aggregator</module>
+        <module>analyzer</module>
     </modules>
 
     <properties>
@@ -26,6 +32,9 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.38</lombok.version>
+        <avro.version>1.11.1</avro.version>
+        <protobuf.version>3.21.12</protobuf.version>
+        <grpc.version>1.57.2</grpc.version>
     </properties>
 
     <dependencyManagement>
@@ -45,6 +54,31 @@
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>${avro.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-netty-shaded</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-protobuf</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-stub</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

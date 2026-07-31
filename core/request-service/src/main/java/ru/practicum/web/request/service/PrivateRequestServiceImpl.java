@@ -2,6 +2,7 @@ package ru.practicum.web.request.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,11 @@ import ru.practicum.web.request.repository.ParticipationRequestRepository;
 import ru.practicum.web.request.validation.RequestValidator;
 import ru.practicum.web.user.entity.User;
 import ru.practicum.web.user.repository.UserRepository;
+import ru.practicum.stats.service.collector.ActionTypeProto;
+import ru.practicum.stats.service.collector.UserActionControllerGrpc;
+import ru.practicum.stats.service.collector.UserActionProto;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,6 +48,8 @@ public class PrivateRequestServiceImpl implements PrivateRequestService {
     private final RequestMapperService mapperService;
     private final RequestStatusUpdateService statusUpdateService;
     private final UserServiceClient userServiceClient;
+    @GrpcClient("collector")
+    private UserActionControllerGrpc.UserActionControllerBlockingStub collectorStub;
 
     @Override
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
@@ -89,6 +96,22 @@ public class PrivateRequestServiceImpl implements PrivateRequestService {
             } catch (Exception e) {
                 log.error("Ошибка при обновлении счетчика confirmedRequests: {}", e.getMessage());
             }
+        }
+
+        try {
+            collectorStub.collectUserAction(
+                    UserActionProto.newBuilder()
+                            .setUserId(userId)
+                            .setEventId(eventId)
+                            .setActionType(ActionTypeProto.ACTION_REGISTER)
+                            .setTimestamp(com.google.protobuf.Timestamp.newBuilder()
+                                    .setSeconds(Instant.now().getEpochSecond())
+                                    .build())
+                            .build()
+            );
+            log.debug("Sent REGISTER action for event {} by user {}", eventId, userId);
+        } catch (Exception e) {
+            log.error("Error sending REGISTER action to collector", e);
         }
 
         return mapperService.toDto(saved);
@@ -154,6 +177,11 @@ public class PrivateRequestServiceImpl implements PrivateRequestService {
         log.info("Статусы заявок обновлены: подтверждено {}, отклонено {}",
                 result.getConfirmedRequests().size(), result.getRejectedRequests().size());
         return result;
+    }
+
+    @Override
+    public boolean isUserParticipated(Long userId, Long eventId) {
+        return requestRepository.existsByRequesterIdAndEventIdAndStatus(userId, eventId, RequestStatus.CONFIRMED);
     }
 
     private void checkUserExists(Long userId) {

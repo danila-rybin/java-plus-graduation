@@ -19,11 +19,18 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-stats:
+grpc:
   client:
-    base-url: http://stats-server:9090
-    connect-timeout-millis: 5000
-    read-timeout-millis: 5000
+    collector:
+      address: 'discovery:///collector'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+    analyzer:
+      address: 'discovery:///analyzer'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
 
 app:
   default-page-size: 10

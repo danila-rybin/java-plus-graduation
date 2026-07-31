@@ -22,8 +22,6 @@ import ru.practicum.web.event.entity.Event;
 import ru.practicum.web.event.entity.EventStatus;
 import ru.practicum.web.event.mapper.EventMapper;
 import ru.practicum.web.event.repository.EventRepository;
-import ru.practicum.web.stats.StatsService;
-
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,7 +34,6 @@ public class AdminEventServiceImpl implements AdminEventService {
 
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
-    private final StatsService statsService;
     private final AdminEventValidator validator;
     private final AdminEventMapperService mapperService;
     private final DateUtils dateUtils;
@@ -92,8 +89,6 @@ public class AdminEventServiceImpl implements AdminEventService {
         List<Event> events = eventPage.getContent();
         log.debug("Найдено {} событий", events.size());
 
-        statsService.setViewsForEvents(events);
-
         return events.stream()
                 .map(EventMapper::toDto)
                 .toList();
@@ -138,10 +133,6 @@ public class AdminEventServiceImpl implements AdminEventService {
         Event savedEvent = eventRepository.save(event);
         log.info("Событие с id={} обновлено, новый статус={}", savedEvent.getId(), savedEvent.getStatus());
 
-        Long views = statsService.getViews(savedEvent);
-        savedEvent.setViews(views);
-
-        log.info("Событие с id={} успешно обновлено", eventId);
         return EventMapper.toDto(savedEvent);
     }
 
@@ -235,9 +226,6 @@ public class AdminEventServiceImpl implements AdminEventService {
         log.debug("Запрос события с id={}", eventId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
-
-        Long views = statsService.getViews(event);
-        event.setViews(views);
 
         return EventMapper.toDto(event);
     }

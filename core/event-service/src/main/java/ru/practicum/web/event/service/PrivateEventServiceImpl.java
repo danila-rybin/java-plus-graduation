@@ -11,13 +11,11 @@ import ru.practicum.dto.EventShortDto;
 import ru.practicum.dto.NewEventDto;
 import ru.practicum.dto.UpdateEventUserRequest;
 import ru.practicum.dto.UserDto;
-import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.exception.BadRequestException;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.feign.UserServiceClient;
 import ru.practicum.web.category.repository.CategoryRepository;
-import ru.practicum.statsclient.StatsClient;
 import ru.practicum.validation.ValidationConstants;
 import ru.practicum.web.event.entity.Event;
 import ru.practicum.web.event.entity.EventStatus;
@@ -29,12 +27,6 @@ import ru.practicum.web.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.SQLException;
 
 @Slf4j
 @Service
@@ -45,9 +37,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final StatsClient statsClient;
     private final UserServiceClient userServiceClient;
-    private final DataSource dataSource;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(ValidationConstants.DATE_TIME_FORMAT);
 
     @Override
@@ -65,29 +55,14 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         List<Event> events = eventRepository.findByInitiatorId(userId, pageable).getContent();
         log.debug("Найдено {} событий", events.size());
 
-        Map<Long, Long> viewsMap = getViewsMap(events);
-
         return events.stream()
-                .map(event -> {
-                    EventShortDto dto = EventMapper.toShortDto(event);
-                    dto.setViews(viewsMap.getOrDefault(event.getId(), ValidationConstants.DEFAULT_VIEWS));
-                    dto.setConfirmedRequests(event.getConfirmedRequests() != null ?
-                            event.getConfirmedRequests() : ValidationConstants.DEFAULT_CONFIRMED_REQUESTS);
-                    return dto;
-                })
-                .collect(Collectors.toList());
+                .map(EventMapper::toShortDto)
+                .toList();
     }
 
     @Override
     public EventDto addEvent(Long userId, NewEventDto dto) {
         log.info("Создание события: userId={}, title={}", userId, dto.getTitle());
-
-        try (Connection conn = dataSource.getConnection()) {
-            String url = conn.getMetaData().getURL();
-            log.debug("DataSource URL for event-service (addEvent): {}", url);
-        } catch (SQLException e) {
-            log.warn("Unable to determine DataSource URL: {}", e.getMessage());
-        }
 
         if (!userServiceClient.userExists(userId)) {
             log.warn("Пользователь не найден в user-service: id={}", userId);
@@ -122,14 +97,12 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 .status(EventStatus.PENDING)
                 .createdOn(LocalDateTime.now())
                 .confirmedRequests(ValidationConstants.DEFAULT_CONFIRMED_REQUESTS)
-                .views(ValidationConstants.DEFAULT_VIEWS)
                 .build();
 
         Event saved = eventRepository.save(event);
         log.info("Создание события: id={}, status={}, title={}, initiatorId={}",
-                 saved.getId(), saved.getStatus(), saved.getTitle(), 
-                 saved.getInitiator() != null ? saved.getInitiator().getId() : "null");
-        log.debug("After save (event-service): eventRepository.existsById({}) = {}", saved.getId(), eventRepository.existsById(saved.getId()));
+                saved.getId(), saved.getStatus(), saved.getTitle(),
+                saved.getInitiator() != null ? saved.getInitiator().getId() : "null");
 
         return EventMapper.toDto(saved);
     }
@@ -148,9 +121,6 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                     log.warn("Событие не найдено: id={}, userId={}", eventId, userId);
                     return new NotFoundException("Event with id=" + eventId + " was not found");
                 });
-
-        Long views = getViewsForEvent(event);
-        event.setViews(views);
 
         return EventMapper.toDto(event);
     }
@@ -191,15 +161,12 @@ public class PrivateEventServiceImpl implements PrivateEventService {
 
         if (updateRequest.getTitle() != null) {
             event.setTitle(updateRequest.getTitle());
-            log.debug("Обновлен заголовок события");
         }
         if (updateRequest.getAnnotation() != null) {
             event.setAnnotation(updateRequest.getAnnotation());
-            log.debug("Обновлена аннотация события");
         }
         if (updateRequest.getDescription() != null) {
             event.setDescription(updateRequest.getDescription());
-            log.debug("Обновлено описание события");
         }
         if (updateRequest.getEventDate() != null) {
             LocalDateTime newEventDate = parseDateTime(updateRequest.getEventDate());
@@ -208,11 +175,9 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 throw new BadRequestException("Field: eventDate. Error: должно содержать дату, которая еще не наступила. Value: " + updateRequest.getEventDate());
             }
             event.setEventDate(newEventDate);
-            log.debug("Обновлена дата события");
         }
         if (updateRequest.getPaid() != null) {
             event.setPaid(updateRequest.getPaid());
-            log.debug("Обновлен статус платности события: {}", updateRequest.getPaid());
         }
         if (updateRequest.getParticipantLimit() != null) {
             if (updateRequest.getParticipantLimit() < ValidationConstants.EVENT_PARTICIPANT_LIMIT_MIN) {
@@ -220,15 +185,12 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 throw new BadRequestException("Participant limit must be non-negative");
             }
             event.setParticipantLimit(updateRequest.getParticipantLimit());
-            log.debug("Обновлен лимит участников: {}", updateRequest.getParticipantLimit());
         }
         if (updateRequest.getRequestModeration() != null) {
             event.setRequestModeration(updateRequest.getRequestModeration());
-            log.debug("Обновлен статус модерации запросов: {}", updateRequest.getRequestModeration());
         }
         if (updateRequest.getLocation() != null) {
             event.setLocation(updateRequest.getLocation());
-            log.debug("Обновлена локация события");
         }
         if (updateRequest.getCategory() != null) {
             var category = categoryRepository.findById(updateRequest.getCategory())
@@ -237,13 +199,9 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                         return new NotFoundException("Category with id=" + updateRequest.getCategory() + " was not found");
                     });
             event.setCategory(category);
-            log.debug("Обновлена категория события");
         }
 
         Event updated = eventRepository.save(event);
-        Long views = getViewsForEvent(updated);
-        updated.setViews(views);
-
         log.info("Событие с id={} успешно обновлено", eventId);
         return EventMapper.toDto(updated);
     }
@@ -259,7 +217,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 }
                 UserDto userDto = users.get(0);
                 log.info("Получены данные пользователя из user-service: id={}, name={}, email={}",
-                         userDto.getId(), userDto.getName(), userDto.getEmail());
+                        userDto.getId(), userDto.getName(), userDto.getEmail());
                 User user = User.builder()
                         .id(userDto.getId())
                         .name(userDto.getName())
@@ -288,77 +246,6 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 log.warn("Ошибка парсинга даты: {}", dateTimeStr);
                 throw new IllegalArgumentException("Invalid date format. Expected: " + ValidationConstants.DATE_TIME_FORMAT + " or ISO format");
             }
-        }
-    }
-
-    private Map<Long, Long> getViewsMap(List<Event> events) {
-        if (events.isEmpty()) {
-            return Map.of();
-        }
-
-        List<String> uris = events.stream()
-                .map(e -> "/events/" + e.getId())
-                .collect(Collectors.toList());
-
-        LocalDateTime start = events.stream()
-                .map(Event::getCreatedOn)
-                .filter(Objects::nonNull)
-                .min(LocalDateTime::compareTo)
-                .orElse(LocalDateTime.now().minusYears(1));
-
-        try {
-            List<ViewStatsDto> stats = statsClient.getStats(
-                    start,
-                    LocalDateTime.now(),
-                    uris,
-                    true
-            );
-
-            return stats.stream()
-                    .filter(stat -> stat.getUri() != null)
-                    .collect(Collectors.toMap(
-                            stat -> extractEventIdFromUri(stat.getUri()),
-                            ViewStatsDto::getHits,
-                            (existing, replacement) -> existing
-                    ));
-        } catch (Exception e) {
-            log.error("Ошибка получения статистики просмотров: {}", e.getMessage());
-            return Map.of();
-        }
-    }
-
-    private Long getViewsForEvent(Event event) {
-        if (event.getId() == null) {
-            return ValidationConstants.DEFAULT_VIEWS;
-        }
-
-        try {
-            LocalDateTime start = event.getCreatedOn() != null ?
-                    event.getCreatedOn() : LocalDateTime.now().minusYears(1);
-
-            String uri = "/events/" + event.getId();
-
-            List<ViewStatsDto> stats = statsClient.getStats(
-                    start,
-                    LocalDateTime.now(),
-                    List.of(uri),
-                    true
-            );
-
-            return stats.isEmpty() ? ValidationConstants.DEFAULT_VIEWS : stats.getFirst().getHits();
-        } catch (Exception e) {
-            log.error("Ошибка получения просмотров для события {}: {}", event.getId(), e.getMessage());
-            return ValidationConstants.DEFAULT_VIEWS;
-        }
-    }
-
-    private Long extractEventIdFromUri(String uri) {
-        try {
-            String[] parts = uri.split("/");
-            return Long.parseLong(parts[parts.length - 1]);
-        } catch (Exception e) {
-            log.error("Ошибка извлечения id из uri: {}", uri);
-            return null;
         }
     }
 }
